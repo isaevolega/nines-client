@@ -1,3 +1,5 @@
+// lib/widgets/hand_widget.dart
+
 import 'package:flutter/material.dart' hide Card;
 import '../models/card.dart';
 import 'card_widget.dart';
@@ -5,12 +7,14 @@ import 'card_widget.dart';
 class HandWidget extends StatelessWidget {
   final List<Card> hand;
   final bool isMyTurn;
+  final List<Card> validMoves;
   final Function(Card)? onCardTap;
 
   const HandWidget({
     super.key,
     required this.hand,
     required this.isMyTurn,
+    required this.validMoves,
     this.onCardTap,
   });
 
@@ -82,23 +86,30 @@ class HandWidget extends StatelessWidget {
 
   Widget _buildSuitGroup(Suit suit, List<Card> cards) {
     return Container(
-      // 🔥 Убрали margin справа — группы идут вплотную
       margin: EdgeInsets.zero,
-      padding: const EdgeInsets.only(right: 0), // Небольшой отступ между группами
+      padding: const EdgeInsets.only(right: 8), // Отступ между группами
       child: SizedBox(
+        // 🔥 ИСПРАВЛЕНО: правильный расчёт ширины
+        // Первая карта: 56px (полная ширина)
+        // Каждая следующая: +28px (с учётом наложения 50%)
+        width: 56 + (cards.length - 1) * 28,
         height: 110,
-        width: 40 + (cards.length - 1) * 28, // 🔥 Расчёт ширины с наложением
         child: Stack(
+          clipBehavior: Clip.none, // 🔥 Важно: не обрезать содержимое
           children: cards.asMap().entries.map((entry) {
             final index = entry.key;
             final card = entry.value;
+            
+            // Проверяем, является ли карта валидной
+            final isValid = validMoves.contains(card);
+            
             return Positioned(
-              left: index * 28, // 🔥 Сдвиг на 28px (карта 56px, наложение ~50%)
+              left: index * 28.0, // Сдвиг на 28px
               top: 0,
               child: CardWidget(
                 card: card,
-                isPlayable: isMyTurn,
-                onTap: isMyTurn ? () => onCardTap?.call(card) : null,
+                isPlayable: isMyTurn && isValid,
+                onTap: (isMyTurn && isValid) ? () => onCardTap?.call(card) : null,
               ),
             );
           }).toList(),

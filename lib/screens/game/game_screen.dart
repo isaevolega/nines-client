@@ -1,3 +1,5 @@
+// lib/screens/game/game_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/game_provider.dart';
@@ -18,6 +20,45 @@ class GameScreen extends StatefulWidget {
 }
 
 class _GameScreenState extends State<GameScreen> {
+  // 🔥 Флаг чтобы показать диалог только один раз
+  bool _gameOverDialogShown = false;
+
+  @override
+  void initState() {
+    super.initState();
+    
+    // 🔥 Устанавливаем callback для показа уведомлений (Snackbar)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final gameProvider = context.read<GameProvider>();
+      gameProvider.setNotificationCallback(_showNotification);
+    });
+  }
+
+  // 🔥 Показ уведомления через Snackbar
+  void _showNotification(String message, String severity) {
+    if (!mounted) return;
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: severity == 'error' 
+            ? Colors.red 
+            : severity == 'success' 
+                ? Colors.green 
+                : Colors.blue,
+        duration: Duration(seconds: severity == 'error' ? 4 : 2),
+        action: severity == 'error' 
+            ? SnackBarAction(
+                label: 'OK',
+                textColor: Colors.white,
+                onPressed: () {},
+              )
+            : null,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Consumer<GameProvider>(
@@ -25,12 +66,18 @@ class _GameScreenState extends State<GameScreen> {
         final roomState = gameProvider.roomState;
         final myPlayer = gameProvider.myPlayer;
         final isMyTurn = myPlayer?.isCurrentTurn ?? false;
-        final timer = roomState?.timer ?? 30;
+        final timer = gameProvider.serverTimer;
+        
+        // 🔥 Проверяем наличие валидных ходов
+        final hasValidMoves = gameProvider.hasValidMoves;
 
-        // Если игра завершилась — показываем диалог
-        if (roomState?.gameOver == true) {
+        // 🔥 Если игра завершилась — показываем диалог (только один раз)
+        if (roomState?.gameOver == true && !_gameOverDialogShown) {
+          _gameOverDialogShown = true;
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            _showGameOverDialog(context, gameProvider);
+            if (mounted) {
+              _showGameOverDialog(context, gameProvider);
+            }
           });
         }
 
@@ -41,7 +88,14 @@ class _GameScreenState extends State<GameScreen> {
           },
           child: Scaffold(
             appBar: _buildAppBar(context, roomState),
-            body: _buildGameBody(context, gameProvider, roomState, isMyTurn, timer),
+            body: _buildGameBody(
+              context, 
+              gameProvider, 
+              roomState, 
+              isMyTurn, 
+              timer,
+              hasValidMoves,  // ← Передаем наличие ходов
+            ),
           ),
         );
       },
@@ -87,6 +141,7 @@ class _GameScreenState extends State<GameScreen> {
     dynamic roomState,
     bool isMyTurn,
     int timer,
+    bool hasValidMoves,  // ← Новый параметр
   ) {
     if (roomState == null) {
       return const Center(child: CircularProgressIndicator());
@@ -97,11 +152,14 @@ class _GameScreenState extends State<GameScreen> {
         // Панель игроков (сверху)
         PlayersPanelWidget(players: roomState.players),
 
-        // Таймер хода
+        // 🔥 Таймер хода с кнопкой «Пропустить»
         TimerWidget(
           timer: timer,
           isMyTurn: isMyTurn,
-          onSkipTurn: isMyTurn ? () => gameProvider.skipTurn() : null,
+          hasValidMoves: hasValidMoves,  // ← Передаем наличие ходов
+          onSkipTurn: (isMyTurn && !hasValidMoves) 
+              ? () => gameProvider.skipTurn() 
+              : null,  // ← Кнопка только если нет ходов
         ),
 
         // Игровой стол (4 стопки)
@@ -113,41 +171,69 @@ class _GameScreenState extends State<GameScreen> {
           ),
         ),
 
-        // Рука игрока (снизу)
+        // 🔥 Рука игрока с подсветкой валидных карт
         HandWidget(
-          hand: gameProvider.myHand,
+          hand: gameProvider.sortedHand,
           isMyTurn: isMyTurn,
+          validMoves: gameProvider.validMoves,  // ← Передаем валидные ходы
           onCardTap: isMyTurn ? (card) => gameProvider.playCard(card) : null,
         ),
 
-        // Индикатор чей ход
-        _buildTurnIndicator(context, roomState, isMyTurn),
+        // 🔥 Индикатор чей ход с учётом наличия ходов
+        _buildTurnIndicator(context, roomState, isMyTurn, hasValidMoves),
       ],
     );
   }
 
   // === Индикатор текущего хода ===
-  Widget _buildTurnIndicator(BuildContext context, dynamic roomState, bool isMyTurn) {
-    final currentPlayer = roomState.currentPlayer;
+  Widget _buildTurnIndicator(
+    BuildContext context, 
+    dynamic roomState, 
+    bool isMyTurn,
+    bool hasValidMoves,
+  ) {
+    // 🔥 ИСПРАВЛЕНО: используем firstWhere с orElse вместо firstOrNull
+    Player? currentPlayer;
+    if (roomState.players.isNotEmpty) {
+      try {
+        currentPlayer = roomState.players.firstWhere(
+          (p) => p.isCurrentTurn,
+          orElse: () => roomState.players.first,
+        );
+      } catch (e) {
+        currentPlayer = roomState.players.first;
+      }
+    }
+    
     final myPlayer = context.read<GameProvider>().myPlayer;
 
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-      color: isMyTurn ? Colors.green[100] : Colors.grey[200],
+      color: isMyTurn 
+          ? (hasValidMoves ? Colors.green[100] : Colors.orange[100]) 
+          : Colors.grey[200],
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           if (isMyTurn) ...[
-            const Icon(Icons.arrow_downward, color: Colors.green, size: 20),
+            Icon(
+              hasValidMoves ? Icons.arrow_downward : Icons.warning,
+              color: hasValidMoves ? Colors.green : Colors.orange,
+              size: 20,
+            ),
             const SizedBox(width: 8),
           ],
           Text(
             isMyTurn
-                ? 'Ваш ход!'
-                : 'Ход игрока: ${currentPlayer?.name ?? "..." }',
+                ? (hasValidMoves 
+                    ? 'Ваш ход!' 
+                    : 'Нет ходов — пропустите или ждите')
+                : 'Ход игрока: ${currentPlayer?.name ?? "..."}',
             style: TextStyle(
               fontWeight: FontWeight.bold,
-              color: isMyTurn ? Colors.green[800] : Colors.grey[700],
+              color: isMyTurn 
+                  ? (hasValidMoves ? Colors.green[800] : Colors.orange[800]) 
+                  : Colors.grey[700],
             ),
           ),
         ],
