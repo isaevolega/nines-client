@@ -103,7 +103,6 @@ class Card {
     // Формат: 6_of_clubs.png, queen_of_hearts.png, 10_of_diamonds.png, ace_of_spades.png
     final suitName = _getSuitName();
     final rankName = _getRankName();
-    print('card path: assets/images/cards/${rankName}_of_$suitName.png');
     return 'assets/images/cards/${rankName}_of_$suitName.png';
   }
   

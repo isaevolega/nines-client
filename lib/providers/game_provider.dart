@@ -75,8 +75,6 @@ class GameProvider extends ChangeNotifier {
   }
   
   void _handleMessage(Map<String, dynamic> msg) {
-    print('[CLIENT] Получено сообщение: ${msg['type']}');
-
     switch (msg['type']) {
       case 'connection_status':
         _wsStatus = WSStatus.values.firstWhere(
@@ -100,10 +98,6 @@ class GameProvider extends ChangeNotifier {
         final data = GameStateMessage.fromJson(msg);
         _roomState = data.data;
         _myHand = data.data.myHand ?? [];
-
-        print('[CLIENT] centerPiles: ${data.data.centerPiles}');  // ← Лог
-        print('[CLIENT] Моя рука: ${_myHand.length} карт');  // ← Лог
-
         _updateOrganizerStatus();
         notifyListeners();
         break;
