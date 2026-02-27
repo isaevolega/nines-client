@@ -132,39 +132,75 @@ class PileWidget extends StatelessWidget {
   }
 
   Widget _buildMiniCard(String rank, Suit suit, {bool isCenter = false}) {
-    // TODO при замене на картину нужно будет поворачивать
-    return Container(
-      width: 56,
-      height: 40,
-      margin: const EdgeInsets.symmetric(vertical: 1),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(4),
-        border: Border.all(
-          color: isCenter ? Colors.green : suit.color,
-          width: isCenter ? 3 : 1,
+    // Создаём объект Card для получения пути к изображению
+    final card = Card(
+      suit: suit,
+      rank: _parseRank(rank),
+    );
+    
+    return Transform.rotate(
+      angle: -1.57, // 90 градусов по часовой стрелке
+      child: Container(
+        width: 40,
+        height: 56,
+        margin: const EdgeInsets.symmetric(vertical: 1),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(4),
+          border: Border.all(
+            color: isCenter ? Colors.green : suit.color,
+            width: isCenter ? 3 : 1,
+          ),
+          boxShadow: isCenter
+              ? [
+                  BoxShadow(
+                    color: Colors.green.withOpacity(0.3),
+                    blurRadius: 4,
+                    spreadRadius: 1,
+                  ),
+                ]
+              : null,
         ),
-        boxShadow: isCenter
-            ? [
-                BoxShadow(
-                  color: Colors.green.withOpacity(0.3),
-                  blurRadius: 4,
-                  spreadRadius: 1,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(4),
+          child: Image.asset(
+            card.assetPath,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) {
+              // Фоллбэк на текст если изображения нет
+              return Container(
+                color: Colors.white,
+                child: Center(
+                  child: Text(
+                    rank,
+                    style: TextStyle(
+                      fontSize: isCenter ? 18 : 14,
+                      fontWeight: isCenter ? FontWeight.bold : FontWeight.normal,
+                      color: suit.color,
+                    ),
+                  ),
                 ),
-              ]
-            : null,
-      ),
-      child: Center(
-        child: Text(
-          rank,
-          style: TextStyle(
-            fontSize: isCenter ? 18 : 14,
-            fontWeight: isCenter ? FontWeight.bold : FontWeight.normal,
-            color: suit.color,
+              );
+            },
           ),
         ),
       ),
     );
+  }
+
+  // Хелпер для парсинга ранга из строки
+  Rank _parseRank(String rank) {
+    switch (rank) {
+      case '6': return Rank.r6;
+      case '7': return Rank.r7;
+      case '8': return Rank.r8;
+      case '9': return Rank.r9;
+      case '10': return Rank.r10;
+      case 'J': return Rank.J;
+      case 'Q': return Rank.Q;
+      case 'K': return Rank.K;
+      case 'A': return Rank.A;
+      default: return Rank.r6;
+    }
   }
 
   int _getCardValue(String rank) {

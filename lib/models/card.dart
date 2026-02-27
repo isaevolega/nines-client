@@ -99,7 +99,13 @@ class Card {
     };
   }
   
-  String get assetPath => 'assets/images/cards/${suit.name}_${rank.name}.png';
+  String get assetPath {
+    // Формат: 6_of_clubs.png, queen_of_hearts.png, 10_of_diamonds.png, ace_of_spades.png
+    final suitName = _getSuitName();
+    final rankName = _getRankName();
+    print('card path: assets/images/cards/${rankName}_of_$suitName.png');
+    return 'assets/images/cards/${rankName}_of_$suitName.png';
+  }
   
   @override
   bool operator ==(Object other) =>
@@ -108,4 +114,27 @@ class Card {
   
   @override
   int get hashCode => suit.hashCode ^ rank.hashCode;
+
+  String _getSuitName() {
+    switch (suit) {
+      case Suit.diamonds: return 'diamonds';
+      case Suit.hearts: return 'hearts';
+      case Suit.spades: return 'spades';
+      case Suit.clubs: return 'clubs';
+    }
+  }
+  
+  String _getRankName() {
+    switch (rank) {
+      case Rank.r6: return '6';
+      case Rank.r7: return '7';
+      case Rank.r8: return '8';
+      case Rank.r9: return '9';
+      case Rank.r10: return '10';
+      case Rank.J: return 'jack';
+      case Rank.Q: return 'queen';
+      case Rank.K: return 'king';
+      case Rank.A: return 'ace';
+    }
+  }
 }

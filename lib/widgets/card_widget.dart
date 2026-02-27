@@ -18,90 +18,52 @@ class CardWidget extends StatelessWidget {
     return GestureDetector(
       onTap: isPlayable ? onTap : null,
       child: Container(
-        width: 70,
-        height: 100,
-        margin: const EdgeInsets.only(right: 6),
+        width: 56,
+        height: 80,
+        margin: const EdgeInsets.only(right: 2), // Уменьшили отступ для наложения
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(6),
           border: Border.all(
-            color: isPlayable ? card.suit.color : Colors.grey,
-            width: isPlayable ? 3 : 1,
+            color: isPlayable ? Colors.white : Colors.grey[600]!,
+            width: isPlayable ? 2 : 1,
           ),
           boxShadow: isPlayable
               ? [
                   BoxShadow(
-                    color: card.suit.color.withOpacity(0.3),
-                    blurRadius: 8,
-                    spreadRadius: 1,
+                    color: Colors.black.withOpacity(0.3),
+                    blurRadius: 4,
+                    spreadRadius: 0,
                   ),
                 ]
               : null,
         ),
-        child: Stack(
-          children: [
-            // Верхний левый угол
-            Positioned(
-              left: 6,
-              top: 6,
-              child: Column(
-                children: [
-                  Text(
-                    card.rank.name,
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: card.suit.color,
-                    ),
-                  ),
-                  Text(
-                    card.suit.symbol,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: card.suit.color,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            // Центр
-            Center(
-              child: Text(
-                card.suit.symbol,
-                style: TextStyle(
-                  fontSize: 36,
-                  color: card.suit.color,
-                ),
-              ),
-            ),
-            // Нижний правый угол (перевёрнутый)
-            Positioned(
-              right: 6,
-              bottom: 6,
-              child: Transform.rotate(
-                angle: 3.14159,
-                child: Column(
-                  children: [
-                    Text(
-                      card.rank.name,
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: card.suit.color,
-                      ),
-                    ),
-                    Text(
-                      card.suit.symbol,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: card.suit.color,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(6),
+          child: Image.asset(
+            card.assetPath,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) {
+              print('Ошибка загрузки карты: $error');
+              // Фоллбэк на текстовую карту если изображения нет
+              return _buildTextCard();
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTextCard() {
+    return Container(
+      color: Colors.white,
+      child: Center(
+        child: Text(
+          '${card.rank.name}${card.suit.symbol}',
+          style: TextStyle(
+            fontSize: 20,
+            color: card.suit.color,
+          ),
         ),
       ),
     );
