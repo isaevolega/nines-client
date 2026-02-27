@@ -1,3 +1,5 @@
+import 'dart:ffi';
+
 import 'package:flutter/material.dart' hide Card;
 import '../models/card.dart';
 
@@ -75,7 +77,7 @@ class PileWidget extends StatelessWidget {
         ),
         child: Center(
           child: Transform.rotate(
-            angle: 1.57, // 90 градусов
+            angle: 1.57,
             child: Text(
               suit.symbol,
               style: TextStyle(
@@ -107,87 +109,125 @@ class PileWidget extends StatelessWidget {
     lowerCards.sort((a, b) => _getCardValue(b).compareTo(_getCardValue(a)));
     higherCards.sort((a, b) => _getCardValue(a).compareTo(_getCardValue(b)));
 
+    // Определяем крайние карты (которые видны полностью)
+    final topEdgeCard = higherCards.isNotEmpty ? higherCards.last : nineCard;
+    final bottomEdgeCard = lowerCards.isNotEmpty ? lowerCards.last : nineCard;
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 4),
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.8),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: suit.color.withOpacity(0.3)),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+      height: 200, // Фиксированная высота стопки
+      child: Stack(
+        alignment: Alignment.center,
         children: [
-          // ВЕРХНИЕ карты (10, J, Q, K, A) — растут вверх
-          ...higherCards.reversed.map((rank) => _buildMiniCard(rank, suit)),
+          // 🔥 НИЖНИЕ карты (6, 7, 8) — растут вниз от центра
+          ..._buildLowerCardsStack(lowerCards, suit, bottomEdgeCard),
           
-          // ЦЕНТР (9)
-          if (nineCard != null) _buildMiniCard(nineCard, suit, isCenter: true),
+          // 🔥 ЦЕНТР (9) — если есть
+          if (nineCard != null)
+            _buildCardWidget(
+              nineCard,
+              suit,
+              isEdge: nineCard == topEdgeCard || nineCard == bottomEdgeCard,
+              offsetY: 0,
+            ),
           
-          // НИЖНИЕ карты (8, 7, 6) — растут вниз
-          ...lowerCards.map((rank) => _buildMiniCard(rank, suit)),
+          // 🔥 ВЕРХНИЕ карты (10, J, Q, K, A) — растут вверх от центра
+          ..._buildHigherCardsStack(higherCards, suit, topEdgeCard),
         ],
       ),
     );
   }
 
-  Widget _buildMiniCard(String rank, Suit suit, {bool isCenter = false}) {
-    // Создаём объект Card для получения пути к изображению
-    final card = Card(
-      suit: suit,
-      rank: _parseRank(rank),
-    );
+  // Строим нижние карты через Stack
+  List<Widget> _buildLowerCardsStack(List<String> cards, Suit suit, String? edgeCard) {
+    if (cards.isEmpty) return [];
     
-    return Transform.rotate(
-      angle: -1.57, // 90 градусов по часовой стрелке
-      child: Container(
-        width: 40,
-        height: 56,
-        margin: const EdgeInsets.symmetric(vertical: 1),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(4),
-          border: Border.all(
-            color: isCenter ? Colors.green : suit.color,
-            width: isCenter ? 3 : 1,
-          ),
-          boxShadow: isCenter
-              ? [
-                  BoxShadow(
-                    color: Colors.green.withOpacity(0.3),
-                    blurRadius: 4,
-                    spreadRadius: 1,
-                  ),
-                ]
-              : null,
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(4),
-          child: Image.asset(
-            card.assetPath,
-            fit: BoxFit.cover,
-            errorBuilder: (context, error, stackTrace) {
-              // Фоллбэк на текст если изображения нет
-              return Container(
-                color: Colors.white,
-                child: Center(
-                  child: Text(
-                    rank,
-                    style: TextStyle(
-                      fontSize: isCenter ? 18 : 14,
-                      fontWeight: isCenter ? FontWeight.bold : FontWeight.normal,
-                      color: suit.color,
+    return cards.asMap().entries.map((entry) {
+      final index = entry.key;
+      final rank = entry.value;
+      final isEdge = rank == edgeCard;
+      
+      // Смещение вниз: каждая следующая карта ниже предыдущей
+      final offsetY = 18 + (index * 14.0); // 14px — плотное наложение
+      
+      return _buildCardWidget(rank, suit, isEdge: isEdge, offsetY: offsetY);
+    }).toList();
+  }
+
+  // Строим верхние карты через Stack
+  List<Widget> _buildHigherCardsStack(List<String> cards, Suit suit, String? edgeCard) {
+    if (cards.isEmpty) return [];
+    
+    return cards.asMap().entries.map((entry) {
+      final index = entry.key;
+      final rank = entry.value;
+      final isEdge = rank == edgeCard;
+      
+      // Смещение вверх: каждая следующая карта выше предыдущей
+      final offsetY = -(18 + (index * 14.0)); // Отрицательный Y — вверх
+      
+      return _buildCardWidget(rank, suit, isEdge: isEdge, offsetY: offsetY);
+    }).toList();
+  }
+
+  // Виджет одной карты
+  Widget _buildCardWidget(String rank, Suit suit, {required bool isEdge, required double offsetY}) {
+    final card = Card(suit: suit, rank: _parseRank(rank));
+    
+    return Transform.translate(
+      offset: Offset(0, offsetY),
+      child: Transform.rotate(
+        angle: -1.57,
+        child: Container(
+          width: 40,
+          height: 56,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(4),
+            border: Border.all(
+              color: isEdge ? suit.color : suit.color.withOpacity(0.2),
+              width: isEdge ? 2 : 1,
+            ),
+            boxShadow: isEdge
+                ? [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.3),
+                      blurRadius: 3,
+                      spreadRadius: 0,
                     ),
-                  ),
-                ),
-              );
-            },
+                  ]
+                : null,
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: Opacity(
+              opacity: isEdge ? 1.0 : 0.3, // 🔥 Средние карты полупрозрачные (30%)
+              child: Image.asset(
+                card.assetPath,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    color: Colors.white,
+                    child: Center(
+                      child: Text(
+                        rank,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: isEdge ? FontWeight.bold : FontWeight.normal,
+                          color: suit.color,
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
           ),
         ),
       ),
     );
   }
 
-  // Хелпер для парсинга ранга из строки
   Rank _parseRank(String rank) {
     switch (rank) {
       case '6': return Rank.r6;
