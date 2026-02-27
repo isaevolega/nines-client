@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:nines_client/models/ws_status.dart';
 import 'package:nines_client/services/storage_service.dart';
 import '../models/room_state.dart';
 import '../models/player.dart';
@@ -6,10 +7,10 @@ import '../models/card.dart';
 import '../services/websocket_service.dart';
 import '../models/messages.dart';
 
-enum WSStatus { disconnected, connecting, connected, error }
-
 class GameProvider extends ChangeNotifier {
   final WebSocketService _wsService;
+
+  WSStatus get wsStatus => _wsService.status;
   
   RoomState? _roomState;
   String? _playerId;
@@ -29,8 +30,23 @@ class GameProvider extends ChangeNotifier {
       isCurrentTurn: false, status: PlayerStatus.lobby, isOrganizer: false,
     ),
   );
-  WSStatus get wsStatus => _wsStatus;
   String? get savedPlayerName => _savedPlayerName;
+
+  List<Card> get sortedHand {
+    final suitOrder = [Suit.diamonds, Suit.hearts, Suit.spades, Suit.clubs];
+    
+    final sorted = List<Card>.from(_myHand);
+    sorted.sort((a, b) {
+      // Сначала сортируем по масти
+      final suitCompare = suitOrder.indexOf(a.suit).compareTo(suitOrder.indexOf(b.suit));
+      if (suitCompare != 0) return suitCompare;
+      
+      // Затем по рангу (6, 7, 8, 9, 10, J, Q, K, A)
+      return a.rank.value.compareTo(b.rank.value);
+    });
+    
+    return sorted;
+  }
   
   GameProvider(this._wsService) {
     _wsService.messageStream.listen(_handleMessage);
@@ -59,6 +75,8 @@ class GameProvider extends ChangeNotifier {
   }
   
   void _handleMessage(Map<String, dynamic> msg) {
+    print('[CLIENT] Получено сообщение: ${msg['type']}');
+
     switch (msg['type']) {
       case 'connection_status':
         _wsStatus = WSStatus.values.firstWhere(
@@ -72,6 +90,7 @@ class GameProvider extends ChangeNotifier {
         final data = JoinSuccessMessage.fromJson(msg);
         _playerId = data.playerId;
         _roomState = data.roomState;
+        _myHand = data.roomState.myHand ?? [];
         _updateOrganizerStatus();
         _savePlayerId();
         notifyListeners();
@@ -80,6 +99,11 @@ class GameProvider extends ChangeNotifier {
       case 'game_state':
         final data = GameStateMessage.fromJson(msg);
         _roomState = data.data;
+        _myHand = data.data.myHand ?? [];
+
+        print('[CLIENT] centerPiles: ${data.data.centerPiles}');  // ← Лог
+        print('[CLIENT] Моя рука: ${_myHand.length} карт');  // ← Лог
+
         _updateOrganizerStatus();
         notifyListeners();
         break;

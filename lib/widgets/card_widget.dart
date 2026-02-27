@@ -18,42 +18,87 @@ class CardWidget extends StatelessWidget {
     return GestureDetector(
       onTap: isPlayable ? onTap : null,
       child: Container(
-        width: 80,
-        height: 120,
-        margin: const EdgeInsets.only(right: 8),
+        width: 70,
+        height: 100,
+        margin: const EdgeInsets.only(right: 6),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: isPlayable ? Colors.green : Colors.grey,
+            color: isPlayable ? card.suit.color : Colors.grey,
             width: isPlayable ? 3 : 1,
           ),
           boxShadow: isPlayable
               ? [
                   BoxShadow(
-                    color: Colors.green.withOpacity(0.5),
+                    color: card.suit.color.withOpacity(0.3),
                     blurRadius: 8,
-                    spreadRadius: 2,
+                    spreadRadius: 1,
                   ),
                 ]
               : null,
         ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+        child: Stack(
           children: [
-            Text(
-              card.rank.name,
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: card.suit.color,
+            // Верхний левый угол
+            Positioned(
+              left: 6,
+              top: 6,
+              child: Column(
+                children: [
+                  Text(
+                    card.rank.name,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: card.suit.color,
+                    ),
+                  ),
+                  Text(
+                    card.suit.symbol,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: card.suit.color,
+                    ),
+                  ),
+                ],
               ),
             ),
-            Text(
-              card.suit.symbol,
-              style: TextStyle(
-                fontSize: 32,
-                color: card.suit.color,
+            // Центр
+            Center(
+              child: Text(
+                card.suit.symbol,
+                style: TextStyle(
+                  fontSize: 36,
+                  color: card.suit.color,
+                ),
+              ),
+            ),
+            // Нижний правый угол (перевёрнутый)
+            Positioned(
+              right: 6,
+              bottom: 6,
+              child: Transform.rotate(
+                angle: 3.14159,
+                child: Column(
+                  children: [
+                    Text(
+                      card.rank.name,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: card.suit.color,
+                      ),
+                    ),
+                    Text(
+                      card.suit.symbol,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: card.suit.color,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ],

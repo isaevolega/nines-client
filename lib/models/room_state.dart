@@ -4,7 +4,8 @@ import 'player.dart';
 class RoomState {
   final String roomId;
   final List<Player> players;
-  final Map<Suit, List<String>> centerPiles; // Ранги карт в стопках
+  final List<Card> myHand; // ← Добавляем
+  final Map<Suit, List<String>> centerPiles;
   final int timer;
   final bool gameOver;
   final bool firstMoveAutoPlayed;
@@ -12,6 +13,7 @@ class RoomState {
   RoomState({
     required this.roomId,
     required this.players,
+    this.myHand = const [], // ← По умолчанию пустой
     required this.centerPiles,
     required this.timer,
     required this.gameOver,
@@ -24,6 +26,9 @@ class RoomState {
       players: (json['players'] as List?)
           ?.map((p) => Player.fromJson(p))
           .toList() ?? [],
+      myHand: (json['myHand'] as List?)
+          ?.map((c) => Card.fromJson(c))
+          .toList() ?? [], // ← Парсим руку
       centerPiles: _parsePiles(json['centerPiles']),
       timer: json['timer'] ?? 30,
       gameOver: json['gameOver'] ?? false,

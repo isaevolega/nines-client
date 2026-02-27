@@ -3,8 +3,7 @@ import 'dart:convert';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import '../config/app_config.dart';
 import '../models/messages.dart';
-
-enum WSStatus { disconnected, connecting, connected, error }
+import '../models/ws_status.dart';
 
 class WebSocketService {
   WebSocketChannel? _channel;

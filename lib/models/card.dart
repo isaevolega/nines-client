@@ -69,10 +69,27 @@ class Card {
   Card({required this.suit, required this.rank});
   
   factory Card.fromJson(Map<String, dynamic> json) {
+    final rankString = json['rank'] as String;
+    
     return Card(
       suit: Suit.values.firstWhere((s) => s.name == json['suit']),
-      rank: Rank.values.firstWhere((r) => r.name == 'r${json['rank']}'),
+      rank: _parseRank(rankString),
     );
+  }
+
+  static Rank _parseRank(String rank) {
+    switch (rank) {
+      case '6': return Rank.r6;
+      case '7': return Rank.r7;
+      case '8': return Rank.r8;
+      case '9': return Rank.r9;
+      case '10': return Rank.r10;
+      case 'J': return Rank.J;
+      case 'Q': return Rank.Q;
+      case 'K': return Rank.K;
+      case 'A': return Rank.A;
+      default: throw Exception('Неизвестный ранг: $rank');
+    }
   }
   
   Map<String, dynamic> toJson() {

@@ -28,15 +28,17 @@ class TableWidget extends StatelessWidget {
           ),
           Expanded(
             child: Padding(
-              padding: const EdgeInsets.all(16.0),
+              padding: const EdgeInsets.all(8.0),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: Suit.values.map((suit) {
                   final cards = centerPiles[suit] ?? [];
-                  return PileWidget(
-                    suit: suit,
-                    cards: cards,
-                    isMyTurn: isMyTurn,
+                  return Expanded(
+                    child: PileWidget(
+                      suit: suit,
+                      cards: cards,
+                      isMyTurn: isMyTurn,
+                    ),
                   );
                 }).toList(),
               ),
@@ -62,79 +64,102 @@ class PileWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        // Название масти
-        Text(
-          _getSuitName(suit),
-          style: TextStyle(
-            fontSize: 12,
-            color: suit.color,
-            fontWeight: FontWeight.bold,
-          ),
+    if (cards.isEmpty) {
+      // Пустая стопка
+      return Container(
+        margin: const EdgeInsets.symmetric(horizontal: 4),
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.grey[400]!, width: 2, style: BorderStyle.solid),
+          borderRadius: BorderRadius.circular(8),
+          color: Colors.white.withOpacity(0.5),
         ),
-        const SizedBox(height: 8),
-        
-        // Стопка карт
-        Container(
-          width: 60,
-          height: 80,
-          decoration: BoxDecoration(
-            border: Border.all(color: Colors.grey[400]!, width: 2),
-            borderRadius: BorderRadius.circular(8),
-            color: Colors.white,
-          ),
-          child: cards.isEmpty
-              ? Center(
-                  child: Text(
-                    suit.symbol,
-                    style: TextStyle(
-                      fontSize: 32,
-                      color: suit.color.withOpacity(0.5),
-                    ),
-                  ),
-                )
-              : Stack(
-                  children: cards.take(3).toList().reversed.toList().asMap().entries.map((entry) {
-                    final index = entry.key;
-                    final rank = entry.value;
-                    return Positioned(
-                      left: index * 2,
-                      top: index * 2,
-                      child: _buildCardPreview(rank, suit),
-                    );
-                  }).toList(),
-                ),
-        ),
-        
-        // Количество карт в стопке
-        if (cards.length > 3)
-          Padding(
-            padding: const EdgeInsets.only(top: 4),
+        child: Center(
+          child: Transform.rotate(
+            angle: 1.57, // 90 градусов
             child: Text(
-              '+${cards.length - 3}',
-              style: const TextStyle(fontSize: 10, color: Colors.grey),
+              suit.symbol,
+              style: TextStyle(
+                fontSize: 40,
+                color: suit.color.withOpacity(0.3),
+              ),
             ),
           ),
-      ],
+        ),
+      );
+    }
+
+    // Разделяем карты на нижние (меньше 9) и верхние (больше 9)
+    final lowerCards = <String>[];  // 8, 7, 6 (идут вниз от 9)
+    final higherCards = <String>[]; // 10, J, Q, K, A (идут вверх от 9)
+    String? nineCard;
+
+    for (final card in cards) {
+      if (card == '9') {
+        nineCard = card;
+      } else if (_getCardValue(card) < 3) {  // 6=0, 7=1, 8=2
+        lowerCards.add(card);
+      } else {  // 10=4, J=5, Q=6, K=7, A=8
+        higherCards.add(card);
+      }
+    }
+
+    // Сортируем: нижние по убыванию (8, 7, 6), верхние по возрастанию (10, J, Q, K, A)
+    lowerCards.sort((a, b) => _getCardValue(b).compareTo(_getCardValue(a)));
+    higherCards.sort((a, b) => _getCardValue(a).compareTo(_getCardValue(b)));
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.8),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: suit.color.withOpacity(0.3)),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          // ВЕРХНИЕ карты (10, J, Q, K, A) — растут вверх
+          ...higherCards.reversed.map((rank) => _buildMiniCard(rank, suit)),
+          
+          // ЦЕНТР (9)
+          if (nineCard != null) _buildMiniCard(nineCard, suit, isCenter: true),
+          
+          // НИЖНИЕ карты (8, 7, 6) — растут вниз
+          ...lowerCards.map((rank) => _buildMiniCard(rank, suit)),
+        ],
+      ),
     );
   }
 
-  Widget _buildCardPreview(String rank, Suit suit) {
+  Widget _buildMiniCard(String rank, Suit suit, {bool isCenter = false}) {
+    // TODO при замене на картину нужно будет поворачивать
     return Container(
-      width: 50,
-      height: 70,
+      width: 56,
+      height: 40,
+      margin: const EdgeInsets.symmetric(vertical: 1),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: Colors.grey[300]!, width: 1),
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(
+          color: isCenter ? Colors.green : suit.color,
+          width: isCenter ? 3 : 1,
+        ),
+        boxShadow: isCenter
+            ? [
+                BoxShadow(
+                  color: Colors.green.withOpacity(0.3),
+                  blurRadius: 4,
+                  spreadRadius: 1,
+                ),
+              ]
+            : null,
       ),
       child: Center(
         child: Text(
           rank,
           style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
+            fontSize: isCenter ? 18 : 14,
+            fontWeight: isCenter ? FontWeight.bold : FontWeight.normal,
             color: suit.color,
           ),
         ),
@@ -142,12 +167,18 @@ class PileWidget extends StatelessWidget {
     );
   }
 
-  String _getSuitName(Suit suit) {
-    switch (suit) {
-      case Suit.diamonds: return 'Буби';
-      case Suit.hearts: return 'Черви';
-      case Suit.spades: return 'Пики';
-      case Suit.clubs: return 'Трефы';
+  int _getCardValue(String rank) {
+    switch (rank) {
+      case '6': return 0;
+      case '7': return 1;
+      case '8': return 2;
+      case '9': return 3;
+      case '10': return 4;
+      case 'J': return 5;
+      case 'Q': return 6;
+      case 'K': return 7;
+      case 'A': return 8;
+      default: return 0;
     }
   }
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:nines_client/models/ws_status.dart';
 import 'package:provider/provider.dart';
 import '../../providers/game_provider.dart';
 import '../../models/player.dart';
@@ -95,9 +96,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
       text: gameProvider.savedPlayerName ?? 'Игрок',
     );
 
-    return Padding(
+    return SingleChildScrollView(  // ← Добавляем прокрутку
       padding: const EdgeInsets.all(24.0),
-      child: Column(
+      child: Column(  // ← Убираем padding отсюда, он теперь в SingleChildScrollView
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           // Логотип / Заголовок
@@ -199,6 +200,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
               );
             },
           ),
+          
+          // Дополнительный отступ снизу для удобства прокрутки
+          const SizedBox(height: 24),
         ],
       ),
     );
